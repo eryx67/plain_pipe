@@ -12,7 +12,7 @@
 
 -export([yield/1, await/1, yield_fsm/1, await_fsm/1]).
 -export([socket_pipe/4, message_src/1, message_sink/2, fun_src/2]).
--export([list_pipe/1, pipe_foldmap/3]).
+-export([list_pipe/1, pipe_foldmap/3, pipe_filter/2]).
 
 -export_type([maybe/1]).
 
@@ -166,6 +166,22 @@ pipe_foldmap(Producer, Fn, Acc) ->
             {V, NewAcc} = Fn(Data, Acc),
             yield(?DATA(V)),
             pipe_foldmap(Producer, Fn, NewAcc);
+        ?FINISH ->
+            yield(?FINISH),
+            ok
+    end.
+
+-spec pipe_filter(pid(), fun((any()) -> boolean())) -> ok.
+pipe_filter(Producer, Fn) ->
+    case await(Producer) of
+        ?DATA(Data) ->
+            case Fn(Data) of
+                true ->
+                    yield(?DATA(Data));
+                false ->
+                    ok
+            end,
+            pipe_filter(Producer, Fn);
         ?FINISH ->
             yield(?FINISH),
             ok
