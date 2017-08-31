@@ -12,7 +12,7 @@
 
 -export([yield/1, await/1, await/2, yield_fsm/1, await_fsm/1, await_fsm/2]).
 -export([socket_pipe/4, message_src/1, message_sink/2, fun_src/2]).
--export([list_pipe/1, pipe_foldmap/3, pipe_filter/2, pipe_timeout/2]).
+-export([list_pipe/1, pipe_foldmap/3, pipe_filter/2, pipe_filter/3, pipe_timeout/2]).
 
 -export_type([maybe/1]).
 
@@ -194,15 +194,21 @@ pipe_timeout(Producer, Timeout) ->
 
 -spec pipe_filter(pid(), fun((any()) -> boolean())) -> ok.
 pipe_filter(Producer, Fn) ->
+    pipe_filter(Producer, fun (R, {}) -> {Fn(R), {}} end).
+
+-spec pipe_filter(pid(), fun((any(), any()) -> {boolean(), any()}), any()) -> ok.
+pipe_filter(Producer, Fn, Acc) ->
     case await(Producer) of
         ?DATA(Data) ->
-            case Fn(Data) of
-                true ->
-                    yield(?DATA(Data));
-                false ->
-                    ok
+            Acc1 =
+                case Fn(Data, Acc) of
+                    {true, Acc1} ->
+                        yield(?DATA(Data)),
+                        Acc1;
+                {false, Acc1} ->
+                    Acc1
             end,
-            pipe_filter(Producer, Fn);
+            pipe_filter(Producer, Fn, Acc1);
         ?FINISH ->
             yield(?FINISH),
             ok
