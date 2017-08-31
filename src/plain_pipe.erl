@@ -194,7 +194,7 @@ pipe_timeout(Producer, Timeout) ->
 
 -spec pipe_filter(pid(), fun((any()) -> boolean())) -> ok.
 pipe_filter(Producer, Fn) ->
-    pipe_filter(Producer, fun (R, {}) -> {Fn(R), {}} end).
+    pipe_filter(Producer, fun (R, {}) -> {Fn(R), {}} end, {}).
 
 -spec pipe_filter(pid(), fun((any(), any()) -> {boolean(), any()}), any()) -> ok.
 pipe_filter(Producer, Fn, Acc) ->
