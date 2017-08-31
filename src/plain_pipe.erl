@@ -200,7 +200,7 @@ pipe_filter(Producer, Fn) ->
 pipe_filter(Producer, Fn, Acc) ->
     case await(Producer) of
         ?DATA(Data) ->
-            Acc1 =
+            NxtAcc =
                 case Fn(Data, Acc) of
                     {true, Acc1} ->
                         yield(?DATA(Data)),
@@ -208,7 +208,7 @@ pipe_filter(Producer, Fn, Acc) ->
                 {false, Acc1} ->
                     Acc1
             end,
-            pipe_filter(Producer, Fn, Acc1);
+            pipe_filter(Producer, Fn, NxtAcc);
         ?FINISH ->
             yield(?FINISH),
             ok
