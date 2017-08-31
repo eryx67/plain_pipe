@@ -10,7 +10,7 @@
 
 -module(plain_pipe).
 
--export([yield/1, await/1, yield_fsm/1, await_fsm/1]).
+-export([yield/1, await/1, await/2, yield_fsm/1, await_fsm/1, await_fsm/2]).
 -export([socket_pipe/4, message_src/1, message_sink/2, fun_src/2]).
 -export([list_pipe/1, pipe_foldmap/3, pipe_filter/2]).
 
@@ -25,6 +25,7 @@
 
 -type maybe(A) :: nothing | {just, A}.
 -type accumulator() :: any().
+-type millisecond() :: pos_integer().
 
 -record(socket_state, {transport
                       , socket
@@ -50,16 +51,22 @@ yield(Msg = ?DATA(_)) ->
             ok
     end.
 
-%% @doc Ask producer for data
-%% @end
 -spec await(pid()) -> maybe(any()).
 await(Producer) ->
+    await(Producer, infinity).
+
+%% @doc Ask producer for data
+%% @end
+-spec await(pid(), millisecond()) -> maybe(any()).
+await(Producer, Timeout) ->
     Producer ! ?ASK_MORE(self()),
     receive
         {Producer, Msg = ?FINISH} ->
             Msg;
         {Producer, Msg = ?DATA(_)} ->
             Msg
+    after Timeout ->
+            exit(Timeout)
     end.
 
 %% @doc Ask producer for data in context of `plain_fsm'
@@ -85,6 +92,12 @@ yield_fsm(Msg = ?DATA(_)) ->
 %% @end
 -spec await_fsm(pid()) -> maybe(any()).
 await_fsm(Producer) ->
+    await_fsm(Producer, infinity).
+
+await_fsm(Producer, Timeout) ->
+    await_fsm_1({Producer, Timeout}).
+
+await_fsm_1({Producer, Timeout}) ->
     Producer ! ?ASK_MORE(self()),
     plain_fsm:extended_receive(
       receive
@@ -92,7 +105,10 @@ await_fsm(Producer) ->
               Msg;
           {Producer, Msg = ?DATA(_)} ->
               Msg
+      after Timeout ->
+              exit(timeout)
       end).
+
 
 %% @doc message producer without flow control.
 %% It recends messages from `Parent'.
@@ -170,6 +186,11 @@ pipe_foldmap(Producer, Fn, Acc) ->
             yield(?FINISH),
             ok
     end.
+
+
+-spec pipe_timeout(pid(), millisecond()) -> ok.
+pipe_filter(Producer, Timeout) ->
+    await(Producer, Timeout).
 
 -spec pipe_filter(pid(), fun((any()) -> boolean())) -> ok.
 pipe_filter(Producer, Fn) ->
