@@ -12,7 +12,7 @@
 
 -export([yield/1, await/1, await/2, yield_fsm/1, await_fsm/1, await_fsm/2]).
 -export([socket_pipe/4, message_src/1, message_sink/2, fun_src/2]).
--export([list_pipe/1, pipe_foldmap/3, pipe_filter/2]).
+-export([list_pipe/1, pipe_foldmap/3, pipe_filter/2, pipe_timeout/2]).
 
 -export_type([maybe/1]).
 
@@ -189,7 +189,7 @@ pipe_foldmap(Producer, Fn, Acc) ->
 
 
 -spec pipe_timeout(pid(), millisecond()) -> ok.
-pipe_filter(Producer, Timeout) ->
+pipe_timeout(Producer, Timeout) ->
     await(Producer, Timeout).
 
 -spec pipe_filter(pid(), fun((any()) -> boolean())) -> ok.
