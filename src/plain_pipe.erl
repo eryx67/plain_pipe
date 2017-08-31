@@ -190,7 +190,14 @@ pipe_foldmap(Producer, Fn, Acc) ->
 
 -spec pipe_timeout(pid(), millisecond()) -> ok.
 pipe_timeout(Producer, Timeout) ->
-    await(Producer, Timeout).
+    case await(Producer, Timeout) of
+        ?DATA(Data) ->
+            yield(?DATA(Data)),
+            pipe_timeout(Producer, Timeout);
+        ?FINISH ->
+            yield(?FINISH),
+            ok
+    end.
 
 -spec pipe_filter(pid(), fun((any()) -> boolean())) -> ok.
 pipe_filter(Producer, Fn) ->
